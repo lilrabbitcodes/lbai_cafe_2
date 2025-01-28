@@ -501,6 +501,27 @@ def show_typing_indicator():
             """, unsafe_allow_html=True)
     return placeholder
 
+# Add this function before the chat handling code
+def format_message_content(content):
+    """Format the message content with proper spacing"""
+    lines = content.split('\n')
+    formatted_lines = []
+    
+    for line in lines:
+        if line.startswith('Word-by-Word Breakdown:'):
+            # Add extra newline before breakdown section
+            formatted_lines.extend(['', line, ''])
+        elif ' - ' in line and '(' in line and ')' in line:
+            # This is a breakdown line, add proper spacing
+            formatted_lines.append(line)
+        elif line.startswith('Suggested Responses:'):
+            # Add extra newline before suggested responses
+            formatted_lines.extend(['', line])
+        else:
+            formatted_lines.append(line)
+    
+    return '\n'.join(formatted_lines)
+
 # Update the chat input handling section
 if prompt := st.chat_input("Type your message here...", key="main_chat_input"):
     # Add user message to chat
@@ -592,24 +613,3 @@ observer.observe(
 );
 </script>
 """, unsafe_allow_html=True)
-
-# Update the chat display section
-def format_message_content(content):
-    """Format the message content with proper spacing"""
-    lines = content.split('\n')
-    formatted_lines = []
-    
-    for line in lines:
-        if line.startswith('Word-by-Word Breakdown:'):
-            # Add extra newline before breakdown section
-            formatted_lines.extend(['', line, ''])
-        elif ' - ' in line and '(' in line and ')' in line:
-            # This is a breakdown line, add proper spacing
-            formatted_lines.append(line)
-        elif line.startswith('Suggested Responses:'):
-            # Add extra newline before suggested responses
-            formatted_lines.extend(['', line])
-        else:
-            formatted_lines.append(line)
-    
-    return '\n'.join(formatted_lines)
