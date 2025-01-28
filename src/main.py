@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Dark theme CSS
+# Update CSS for static positioning
 st.markdown("""
     <style>
         /* Main app container */
