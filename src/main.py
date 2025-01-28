@@ -35,52 +35,35 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get only the first part before any sections
-        main_content = text.split('\n\n')[0] if '\n\n' in text else text
-        cleaned_text = ""
+        # Find the first Chinese text before any translations or sections
+        lines = text.split('\n')
+        chinese_text = ""
         
-        # Process only the first few lines until we hit a section marker
-        for line in main_content.split('\n'):
-            # Stop if we hit any section markers
-            if any(marker in line for marker in ['Word-by-Word', 'Suggested', '---', 'Try', '🎯']):
-                break
-                
-            # Skip if line is empty or is a translation (in parentheses)
-            if not line.strip() or line.strip().startswith('('):
+        for line in lines:
+            # Skip empty lines, translations, or section markers
+            if not line.strip() or line.strip().startswith('(') or any(marker in line for marker in ['Word-by-Word', 'Suggested', '---', 'Try', '🎯', 'In this']):
                 continue
+                
+            # Get only the Chinese text (before any parentheses)
+            chinese_part = line.split('(')[0].strip()
             
-            # Get the Chinese part before any translation
-            chinese_part = line.split('(')[0] if '(' in line else line
-            
-            # Replace [name] with actual name if present
-            if user_name:
-                chinese_part = chinese_part.replace("[name]", user_name)
-            
-            # Process each word in the line
-            words = chinese_part.split()
-            line_text = ""
-            for word in words:
-                # Keep the word if it's the user's name
-                if user_name and user_name.lower() in word.lower():
-                    line_text += user_name + " "
-                # Keep the word if it contains Chinese characters or specific punctuation
-                elif any('\u4e00' <= c <= '\u9fff' for c in word) or any(c in '，。！？' for c in word):
-                    line_text += word + " "
-                # Keep emojis if present
-                elif any(c for c in word if c in '☕🌸💕💖🌟'):
-                    line_text += word + " "
-            
-            if line_text.strip():
-                cleaned_text += line_text.strip() + " "
+            # If we found Chinese text, use it and break
+            if any('\u4e00' <= c <= '\u9fff' for c in chinese_part):
+                chinese_text = chinese_part
+                break
+        
+        # Replace [name] with actual name if present
+        if user_name and chinese_text:
+            chinese_text = chinese_text.replace("[name]", user_name)
         
         # Skip if no Chinese text to process
-        if not cleaned_text.strip():
+        if not chinese_text:
             return ""
         
         response = client.audio.speech.create(
             model="tts-1",
             voice="nova",
-            input=cleaned_text.strip()
+            input=chinese_text
         )
         
         # Save the audio to a temporary file
@@ -543,30 +526,37 @@ def format_message_content(content):
     formatted_lines = []
     
     for line in lines:
-        # Skip the "Repeat after me" header
-        if line.strip() in ['🎯 Repeat after me:', '-------------------']:
+        # Skip the "Repeat after me" header and dividers
+        if any(skip in line for skip in ['🎯 Repeat after me:', '-------------------']):
             continue
-        elif line.startswith('Word-by-Word Breakdown:'):
-            # Add extra newline before breakdown section
-            formatted_lines.extend(['', line, ''])
-        elif ' - ' in line and '(' in line and ')' in line:
-            # This is a breakdown line, add proper spacing
+            
+        # Handle Chinese text and translations
+        elif '(' in line and ')' in line and any('\u4e00' <= c <= '\u9fff' for c in line):
             formatted_lines.append(line)
+            
+        # Handle section headers
+        elif line.startswith('Word-by-Word Breakdown:'):
+            formatted_lines.extend(['', line, ''])
+            
+        # Handle suggested responses section
         elif line.startswith('Suggested Responses:'):
-            # Add extra newline and formatting for suggested responses
             formatted_lines.extend([
                 '',
                 '---',
                 '👉 Try one of these responses:',
                 ''
             ])
+            
+        # Handle numbered responses
         elif line.strip().startswith(('1.', '2.', '3.')):
-            # Format numbered responses with emojis and better spacing
             formatted_lines.extend(['', f'🗣 {line}'])
-        elif line.startswith('In this scenario'):
-            # Add extra spacing for scenario description
+            
+        # Handle scenario descriptions
+        elif line.startswith('*') and line.endswith('*'):
             formatted_lines.extend(['', line])
-        else:
+            
+        # Handle other lines
+        elif line.strip():
             formatted_lines.append(line)
     
     return '\n'.join(formatted_lines)
