@@ -586,14 +586,19 @@ def format_message_content(content):
             
         # Handle Chinese text and translations
         elif '(' in line and ')' in line and any('\u4e00' <= c <= '\u9fff' for c in line):
-            formatted_lines.append(line)
+            # Split multiple sentences if they exist
+            sentences = line.split('。')
+            for sentence in sentences:
+                if sentence.strip():
+                    formatted_lines.append(sentence.strip() + '。')
+                    formatted_lines.append('')  # Add empty line after each sentence
             
         # Handle section headers
         elif line.startswith('Word-by-Word Breakdown:'):
             formatted_lines.extend(['', line, ''])
             
         # Handle suggested responses section
-        elif line.startswith('Suggested Responses:'):
+        elif line.startswith('Suggested Responses:') or line.startswith('👉 Try'):
             formatted_lines.extend([
                 '',
                 '---',
@@ -603,13 +608,25 @@ def format_message_content(content):
             
         # Handle numbered responses
         elif line.strip().startswith(('1.', '2.', '3.')):
-            formatted_lines.extend(['', f'🗣 {line}'])
+            parts = line.split(')')
+            if len(parts) > 1:
+                formatted_lines.extend([
+                    '',
+                    f'🗣 {parts[0]})',  # Chinese
+                    f'   {parts[1].strip()}' if len(parts) > 1 else '',  # Pinyin
+                ])
+            else:
+                formatted_lines.extend(['', f'🗣 {line}'])
+            
+        # Handle word explanations
+        elif 'Word Explanation:' in line:
+            formatted_lines.extend(['', '   ' + line])
             
         # Handle scenario descriptions
         elif line.startswith('*') and line.endswith('*'):
-            formatted_lines.extend(['', line])
+            formatted_lines.extend(['', line, ''])
             
-        # Handle other lines
+        # Handle other lines that aren't empty
         elif line.strip():
             formatted_lines.append(line)
     
