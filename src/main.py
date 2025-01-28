@@ -595,6 +595,14 @@ Detailed Café Scenarios:
    请坐 - please sit
    聊天 - to chat
 
+🗣 3. 欢迎坐这里，一个人喝咖啡有点无聊
+   (huān yíng zuò zhè lǐ, yī gè rén hē kā fēi yǒu diǎn wú liáo)
+   Welcome to sit here, drinking coffee alone is a bit boring
+
+   Word Explanation:
+   欢迎 - welcome
+   无聊 - boring
+
 2. Menu Help:
 *茜茜看着菜单显得有点困惑* 😊
 (Serena looks a bit confused at the menu)
@@ -621,33 +629,15 @@ Detailed Café Scenarios:
    翻译 - translate
    类型 - type
 
-3. Ordering Help:
-*茜茜犹豫不决* 🤔
-(Serena seems indecisive)
-
-[name]，你觉得我应该点什么？我喜欢甜一点的饮料。
-([name], nǐ jué de wǒ yīng gāi diǎn shén me? wǒ xǐ huān tián yī diǎn de yǐn liào.)
-([name], what do you think I should order? I like slightly sweet drinks.)
-
-👉 Try one of these responses:
-
-🗣 1. 我建议你试试焦糖拿铁，甜度可以选择半糖
-   (wǒ jiàn yì nǐ shì shi jiāo táng ná tiě, tián dù kě yǐ xuǎn zé bàn táng)
-   I suggest trying the caramel latte, you can choose half sugar
+🗣 3. 我经常来这家店，让我推荐几个特色饮品
+   (wǒ jīng cháng lái zhè jiā diàn, ràng wǒ tuī jiàn jǐ gè tè sè yǐn pǐn)
+   I come here often, let me recommend some specialty drinks
 
    Word Explanation:
-   建议 - suggest
-   焦糖 - caramel
+   经常 - often
+   特色 - specialty
 
-🗣 2. 让我帮你点一杯抹茶拿铁吧，很适合你
-   (ràng wǒ bāng nǐ diǎn yī bēi mǒ chá ná tiě ba, hěn shì hé nǐ)
-   Let me order you a matcha latte, it would suit you well
-
-   Word Explanation:
-   抹茶 - matcha
-   适合 - suitable for
-
-[Continue with more scenarios...]"""
+[Continue with more scenarios, each with 2-3 suggested responses...]"""
 
 # Initialize session state with user info
 if "user_info" not in st.session_state:
