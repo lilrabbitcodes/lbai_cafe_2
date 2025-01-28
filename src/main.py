@@ -35,17 +35,21 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get only the main content before Word-by-Word Breakdown
-        main_content = text.split('Word-by-Word Breakdown:')[0] if 'Word-by-Word Breakdown:' in text else text
+        # Get only the first part before any sections
+        main_content = text.split('\n\n')[0] if '\n\n' in text else text
         cleaned_text = ""
-        lines = main_content.split('\n')
         
-        for line in lines:
-            # Skip if line is empty or starts with common non-Chinese sections
-            if not line.strip() or any(line.startswith(x) for x in ['Repeat after me:', 'Try', '---', '🎯']):
+        # Process only the first few lines until we hit a section marker
+        for line in main_content.split('\n'):
+            # Stop if we hit any section markers
+            if any(marker in line for marker in ['Word-by-Word', 'Suggested', '---', 'Try', '🎯']):
+                break
+                
+            # Skip if line is empty or is a translation (in parentheses)
+            if not line.strip() or line.strip().startswith('('):
                 continue
             
-            # Get the Chinese part before the translation
+            # Get the Chinese part before any translation
             chinese_part = line.split('(')[0] if '(' in line else line
             
             # Replace [name] with actual name if present
@@ -67,7 +71,7 @@ def text_to_speech(text, user_name=None):
                     line_text += word + " "
             
             if line_text.strip():
-                cleaned_text += line_text.strip() + "。"  # Add period between sentences
+                cleaned_text += line_text.strip() + " "
         
         # Skip if no Chinese text to process
         if not cleaned_text.strip():
