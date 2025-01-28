@@ -35,8 +35,8 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get only the first part of the message (before any breakdown or suggestions)
-        main_text = text.split('\n\n')[0] if '\n\n' in text else text
+        # Get only the first line of Chinese text (before the English translation)
+        main_text = text.split('(')[0] if '(' in text else text.split('\n')[0]
         
         # Clean up the text and keep only Chinese characters and user's name
         cleaned_text = ""
@@ -45,27 +45,21 @@ def text_to_speech(text, user_name=None):
         if user_name:
             main_text = main_text.replace("{name}", user_name)
         
-        for line in main_text.split('\n'):
-            # Skip lines that are translations (in parentheses)
-            if line.strip().startswith('('):
-                continue
-                
-            # Process each word in the line
-            words = line.split()
-            line_text = ""
-            for word in words:
-                # Keep the word if it's the user's name
-                if user_name and user_name.lower() in word.lower():
-                    line_text += user_name + " "
-                # Keep the word if it contains Chinese characters
-                elif any('\u4e00' <= c <= '\u9fff' for c in word):
-                    # Remove any non-Chinese characters (like punctuation in parentheses)
-                    chinese_only = ''.join(c for c in word if '\u4e00' <= c <= '\u9fff' or c in '，。！？')
-                    if chinese_only:
-                        line_text += chinese_only + " "
-            
-            if line_text.strip():
-                cleaned_text += line_text + " "
+        # Process the main text
+        words = main_text.split()
+        for word in words:
+            # Keep the word if it's the user's name
+            if user_name and user_name.lower() in word.lower():
+                cleaned_text += user_name + " "
+            # Keep the word if it contains Chinese characters
+            elif any('\u4e00' <= c <= '\u9fff' for c in word):
+                # Remove any non-Chinese characters (except punctuation)
+                chinese_only = ''.join(c for c in word if '\u4e00' <= c <= '\u9fff' or c in '，。！？')
+                if chinese_only:
+                    cleaned_text += chinese_only + " "
+            # Keep emojis if present
+            elif any(c for c in word if c in '☕🌸💕💖'):
+                cleaned_text += word + " "
         
         # Skip if no Chinese text to process
         if not cleaned_text.strip():
@@ -280,24 +274,31 @@ Key Interaction Rules:
    - Table manners
 
 Example Response Format:
-[name]亲爱的，这个蛋糕看起来好好吃！ 🍰
-([name] dear, this cake looks so delicious!)
+亲爱的[name]宝贝，你能帮我点咖啡吗？☕
+(Dear [name], can you help me order coffee?)
 
-Breakdown:
-[name]亲爱的 ([name] qīn'ài de) - dear [name]
-这个 (zhè ge) - this
-蛋糕 (dàn gāo) - cake
-看起来 (kàn qǐ lái) - looks
-好好吃 (hǎo hǎo chī) - very delicious
+Would you like to choose a coffee for us? It's so sweet of you to help me! 🌸💕
 
-Try saying:
-1. 要不要尝一口？
-   (yào bú yào cháng yī kǒu?)
-   Would you like a taste?
+Word-by-Word Breakdown:
+亲爱的 (qīn'ài de) - dear
+[name]宝贝 ([name] bǎo bèi) - [name] darling
+你能 (nǐ néng) - can you
+帮我 (bāng wǒ) - help me
+点 (diǎn) - order
+咖啡 (kā fēi) - coffee
 
-2. 我们一起分享吧
-   (wǒ men yī qǐ fēn xiǎng ba)
-   Let's share it together
+Suggested Responses:
+1. 当然，我来帮你选择。
+   (dāng rán, wǒ lái bāng nǐ xuǎn zé.)
+   Of course, I'll help you choose.
+
+2. 我们一起看看菜单吧。
+   (wǒ men yī qǐ kàn kàn cài dān ba.)
+   Let's look at the menu together.
+
+3. 你喜欢什么口味的咖啡？
+   (nǐ xǐ huān shén me kǒu wèi de kā fēi?)
+   What flavor of coffee do you like?
 
 Remember:
 - Always create situations where user can help
