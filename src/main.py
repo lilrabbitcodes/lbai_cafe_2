@@ -637,7 +637,87 @@ Detailed Café Scenarios:
    经常 - often
    特色 - specialty
 
-[Continue with more scenarios, each with 2-3 suggested responses...]"""
+3. Customizing Drinks:
+*服务员拿着笔准备记录* ✍️
+(Server is ready with pen to take notes)
+
+[name]，这个拿铁可以选择温度和甜度，但是我不太会点。
+([name], zhè ge ná tiě kě yǐ xuǎn zé wēn dù hé tián dù, dàn shì wǒ bù tài huì diǎn.)
+([name], this latte can be customized for temperature and sweetness, but I'm not sure how to order.)
+
+👉 Try one of these responses:
+
+🗣 1. 我来帮你点：温的，半糖，要加奶盖吗？
+   (wǒ lái bāng nǐ diǎn: wēn de, bàn táng, yào jiā nǎi gài ma?)
+   Let me order for you: warm, half sugar, would you like cream top?
+
+   Word Explanation:
+   温的 - warm
+   半糖 - half sugar
+   奶盖 - cream top
+
+🗣 2. 你想要冰的还是热的？糖要多少？
+   (nǐ xiǎng yào bīng de hái shì rè de? táng yào duō shao?)
+   Would you like it iced or hot? How much sugar?
+
+   Word Explanation:
+   冰的 - iced
+   热的 - hot
+   多少 - how much
+
+4. Adding Toppings:
+*茜茜看着配料单* 
+(Serena looking at the toppings menu)
+
+[name]，我看到这里可以加珍珠和椰果，你觉得哪个好吃？
+([name], wǒ kàn dào zhè lǐ kě yǐ jiā zhēn zhū hé yē guǒ, nǐ jué de nǎ ge hǎo chī?)
+([name], I see we can add pearls and coconut jelly, which one do you think is better?)
+
+👉 Try one of these responses:
+
+🗣 1. 珍珠比较有嚼劲，我建议你试试
+   (zhēn zhū bǐ jiào yǒu jiáo jìn, wǒ jiàn yì nǐ shì shi)
+   Pearls have better texture, I suggest you try them
+
+   Word Explanation:
+   嚼劲 - chewy texture
+   建议 - suggest
+
+🗣 2. 要不要都加一点？我请你
+   (yào bú yào dōu jiā yī diǎn? wǒ qǐng nǐ)
+   How about adding both? It's my treat
+
+   Word Explanation:
+   都加 - add both
+   请你 - treat you
+
+5. Food Pairing:
+*服务员推荐今日特餐* 
+(Server recommending today's special)
+
+这个华夫饼看起来好美味，配咖啡应该很搭配。
+(zhè ge huá fū bǐng kàn qǐ lái hǎo měi wèi, pèi kā fēi yīng gāi hěn dā pèi.)
+(This waffle looks delicious, should pair well with coffee.)
+
+👉 Try one of these responses:
+
+🗣 1. 要不要点一份分享？配你的拿铁很合适
+   (yào bú yào diǎn yī fèn fēn xiǎng? pèi nǐ de ná tiě hěn hé shì)
+   Shall we order one to share? It would go well with your latte
+
+   Word Explanation:
+   分享 - share
+   合适 - suitable
+
+🗣 2. 我也觉得不错，要配奶油和水果吗？
+   (wǒ yě jué de bú cuò, yào pèi nǎi yóu hé shuǐ guǒ ma?)
+   I think it's good too, would you like cream and fruit with it?
+
+   Word Explanation:
+   奶油 - cream
+   水果 - fruit
+
+[Continue with more scenarios...]"""
 
 # Initialize session state with user info
 if "user_info" not in st.session_state:
