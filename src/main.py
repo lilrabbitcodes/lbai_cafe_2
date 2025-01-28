@@ -539,13 +539,9 @@ def format_message_content(content):
     formatted_lines = []
     
     for line in lines:
-        if line.startswith('🎯 Repeat after me:'):
-            # Add extra formatting for repeat section
-            formatted_lines.extend([
-                '',
-                '🎯 Repeat after me:',
-                '-------------------'
-            ])
+        # Skip the "Repeat after me" header
+        if line.strip() in ['🎯 Repeat after me:', '-------------------']:
+            continue
         elif line.startswith('Word-by-Word Breakdown:'):
             # Add extra newline before breakdown section
             formatted_lines.extend(['', line, ''])
@@ -563,6 +559,9 @@ def format_message_content(content):
         elif line.strip().startswith(('1.', '2.', '3.')):
             # Format numbered responses with emojis and better spacing
             formatted_lines.extend(['', f'🗣 {line}'])
+        elif line.startswith('In this scenario'):
+            # Add extra spacing for scenario description
+            formatted_lines.extend(['', line])
         else:
             formatted_lines.append(line)
     
