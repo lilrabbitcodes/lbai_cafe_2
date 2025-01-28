@@ -2,244 +2,77 @@ import os
 import json
 import streamlit as st
 from openai import OpenAI
-from openai import APIConnectionError
 import base64
 import requests
-from openai import AuthenticationError
 from streamlit.components.v1 import html
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
+import random
 
 # Load environment variables
 load_dotenv()
 
-# MUST BE THE FIRST STREAMLIT COMMAND
-st.set_page_config(
-    page_title="Chinese Language Tutor",
-    page_icon="🤖",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+# Get API key from environment variables
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    st.error("❌ No OpenAI API key found. Please check your .env file.")
+    st.stop()
 
-# Update CSS for static positioning
-st.markdown("""
-    <style>
-        /* Main app container */
-        .stApp {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            overflow: hidden !important;
-            height: 100vh !important;
-            width: 100vw !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
+# Initialize OpenAI client with API key
+client = OpenAI(api_key=api_key)
 
-        /* Main content area */
-        .main .block-container {
-            padding: 0 !important;
-            max-width: none !important;
-            width: 100% !important;
-            height: 100% !important;
-            overflow: hidden !important;
-            position: relative !important;
-        }
-
-        /* Title styling */
-        h1 {
-            position: sticky !important;
-            top: 0 !important;
-            background: white !important;
-            margin: 0 !important;
-            padding: 1rem !important;
-            z-index: 99 !important;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
-        }
-
-        /* Messages container */
-        .stChatMessageContainer {
-            height: calc(100vh - 180px) !important;
-            overflow-y: auto !important;
-            padding: 1rem !important;
-            position: fixed !important;
-            top: 60px !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 60px !important;
-        }
-
-        /* Input container */
-        .stChatInputContainer {
-            border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-            padding: 10px !important;
-            background: white !important;
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            z-index: 100 !important;
-            display: flex !important;
-            align-items: center !important;
-            height: 60px !important;
-        }
-
-        /* Chat input wrapper */
-        .stChatInput {
-            flex: 1 !important;
-            border: 1px solid #ddd !important;
-            border-radius: 20px !important;
-            background: white !important;
-            position: relative !important;
-            display: flex !important;
-            align-items: center !important;
-            max-width: calc(100% - 20px) !important;
-            margin: 0 10px !important;
-        }
-
-        /* Input field */
-        .stChatInput textarea {
-            border: none !important;
-            background: transparent !important;
-            padding: 8px 40px 8px 15px !important;
-            color: #333 !important;
-            font-size: 16px !important;
-            width: 100% !important;
-            min-height: 40px !important;
-            line-height: 20px !important;
-        }
-
-        /* Send button */
-        .stChatInput button {
-            position: absolute !important;
-            right: 4px !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
-            background-color: #333 !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 32px !important;
-            height: 32px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            cursor: pointer !important;
-            padding: 0 !important;
-        }
-
-        /* Send button icon */
-        .stChatInput button svg {
-            width: 20px !important;
-            height: 20px !important;
-            fill: white !important;
-            margin: auto !important;
-        }
-
-        /* iOS specific fixes */
-        @supports (-webkit-touch-callout: none) {
-            .stChatInputContainer {
-                padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
-                height: calc(60px + env(safe-area-inset-bottom)) !important;
-            }
-
-            .stChatMessageContainer {
-                bottom: calc(60px + env(safe-area-inset-bottom)) !important;
-            }
-        }
-
-        /* Remove Streamlit elements */
-        #MainMenu, div.stApp > header, div.stApp > footer,
-        .stDeployButton, [data-testid="stFooterBlock"], 
-        [data-testid="stToolbar"], [data-testid="stDecoration"], 
-        [data-testid="stStatusWidget"] {
-            display: none !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-# Add auto-scrolling JavaScript
-st.markdown("""
-    <script>
-        const scrollToBottom = () => {
-            const messages = document.querySelector('.stChatMessageContainer');
-            if (messages) {
-                messages.scrollTop = messages.scrollHeight;
-            }
-        };
-
-        // Create observer to watch for new messages
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.addedNodes.length) {
-                    scrollToBottom();
-                }
-            });
-        });
-
-        // Start observing
-        const messagesContainer = document.querySelector('.stChatMessageContainer');
-        if (messagesContainer) {
-            observer.observe(messagesContainer, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // Initial scroll
-        scrollToBottom();
-    </script>
-""", unsafe_allow_html=True)
-
-# Load custom avatars with fallback to emojis
-working_dir = os.path.dirname(os.path.abspath(__file__))
-ASSETS_DIR = os.path.join(working_dir, "assets")
-
-# Create assets directory if it doesn't exist
-if not os.path.exists(ASSETS_DIR):
-    os.makedirs(ASSETS_DIR)
-
-# Define avatar paths and fallbacks
-TUTOR_AVATAR_PATH = os.path.join(ASSETS_DIR, "tutor_avatar.png")
-USER_AVATAR_PATH = os.path.join(ASSETS_DIR, "user_avatar.png")
-
-# Use emoji fallbacks if images don't exist
-TUTOR_AVATAR = TUTOR_AVATAR_PATH if os.path.exists(TUTOR_AVATAR_PATH) else "👩‍🏫"
-USER_AVATAR = USER_AVATAR_PATH if os.path.exists(USER_AVATAR_PATH) else "👤"
-
-# Use environment variable instead of config.json
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-
-# Create OpenAI client
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-# Test the API connection before starting
+# Silently test the connection
 try:
-    test_response = client.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": "test"}],
         max_tokens=5
     )
-    st.success("✅ Successfully connected to OpenAI API")
-except AuthenticationError:
-    st.error("❌ Invalid API key. Please check your OpenAI API key in config.json")
-    st.stop()
-except APIConnectionError:
-    st.error("❌ Connection error. Please check your internet connection")
-    st.stop()
 except Exception as e:
-    st.error(f"❌ Unexpected error: {str(e)}")
+    st.error(f"❌ API Error: {str(e)}")
     st.stop()
 
-def text_to_speech(text):
-    """Convert text to speech using OpenAI's TTS"""
+def text_to_speech(text, user_name=None):
+    """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
+        # Clean up the text and keep only Chinese characters and user's name
+        cleaned_text = ""
+        in_parentheses = False
+        
+        # Replace {name} placeholder with actual user name if present
+        if user_name:
+            text = text.replace("{name}", user_name)
+        
+        for line in text.split('\n'):
+            # Skip sections that are explanations or translations
+            if any(skip in line.lower() for skip in ["breakdown:", "option", "---", "try", "type"]):
+                continue
+                
+            # Process each word in the line
+            words = line.split()
+            line_text = ""
+            for word in words:
+                # Keep the word if it's the user's name
+                if user_name and user_name.lower() in word.lower():
+                    line_text += user_name + " "
+                # Keep the word if it contains Chinese characters
+                elif any('\u4e00' <= c <= '\u9fff' for c in word):
+                    # Remove any non-Chinese characters (like punctuation in parentheses)
+                    chinese_only = ''.join(c for c in word if '\u4e00' <= c <= '\u9fff' or c in '，。！？')
+                    if chinese_only:
+                        line_text += chinese_only + " "
+            
+            if line_text.strip():
+                cleaned_text += line_text + " "
+        
+        # Skip if no Chinese text to process
+        if not cleaned_text.strip():
+            return ""
+        
         response = client.audio.speech.create(
             model="tts-1",
-            voice="alloy",
-            input=text
+            voice="nova",
+            input=cleaned_text.strip()
         )
         
         # Save the audio to a temporary file
@@ -254,121 +87,487 @@ def text_to_speech(text):
         # Remove temporary file
         os.remove(audio_file_path)
         
-        # Create HTML audio element
+        # Create HTML audio element with subtle styling
         audio_html = f"""
-            <audio id="audio" controls>
-                <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
-            </audio>
+            <div style="margin: 8px 0;">
+                <audio controls style="height: 30px; width: 180px;">
+                    <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                </audio>
+            </div>
             """
         return audio_html
     except Exception as e:
         return f"Error generating audio: {str(e)}"
 
-# initialize chat session in streamlit if not already present
+# Load custom avatars
+working_dir = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(working_dir, "assets")
+
+# Create assets directory if it doesn't exist
+if not os.path.exists(ASSETS_DIR):
+    os.makedirs(ASSETS_DIR)
+
+# Define avatar paths
+TUTOR_AVATAR = os.path.join(ASSETS_DIR, "tutor_avatar.png")
+USER_AVATAR = os.path.join(ASSETS_DIR, "user_avatar.png")
+
+# After ASSETS_DIR definition, add:
+MP4_DIR = os.path.join(ASSETS_DIR, "mp4")
+KISSY_VIDEO = os.path.join(MP4_DIR, "kissy.mp4")
+
+# Add chat styling
+st.markdown("""
+    <style>
+        /* Main container adjustments */
+        .stChatFloatingInputContainer {
+            padding-bottom: 60px;
+        }
+        
+        /* Message container */
+        .stChatMessage {
+            width: 85% !important;
+            padding: 1rem !important;
+            margin: 1rem 0 !important;
+            position: relative !important;
+        }
+        
+        /* Assistant messages - left aligned */
+        div[data-testid="assistant-message"] {
+            margin-right: auto !important;
+            margin-left: 0 !important;
+            background-color: #f0f2f6 !important;
+            border-radius: 15px 15px 15px 0 !important;
+        }
+        
+        /* User messages - right aligned */
+        div[data-testid="user-message"] {
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            background-color: #2e7bf6 !important;
+            color: white !important;
+            border-radius: 15px 15px 0 15px !important;
+        }
+        
+        /* Message content alignment */
+        div[data-testid="assistant-message"] > div {
+            text-align: left !important;
+        }
+        
+        div[data-testid="user-message"] > div {
+            text-align: right !important;
+        }
+        
+        /* Audio player styling */
+        audio {
+            width: 100% !important;
+            max-width: 200px !important;
+            margin-top: 8px !important;
+        }
+        
+        /* Avatar adjustments */
+        .stChatMessage .stAvatar {
+            margin: 0 5px !important;
+        }
+        
+        /* Hide default message margins */
+        .stMarkdown {
+            margin: 0 !important;
+        }
+        
+        /* Typing indicator container */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            background: #f0f2f6;
+            border-radius: 15px;
+            width: fit-content;
+            margin: 0;
+        }
+        
+        /* Typing dots */
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #666;
+            border-radius: 50%;
+            animation: typing-dot 1.4s infinite;
+            opacity: 0.3;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing-dot {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+SYSTEM_PROMPT = """You are Mei Mei, a sweet and feminine Chinese tutor who creates romantic coffee date scenarios. Your purpose is to help users practice Chinese while feeling like they're on a date.
+
+Core Personality:
+- Always address user with endearing terms: '亲爱的 [name]', '[name] 宝贝', or just '亲爱的/宝贝'
+- Be gentle, nurturing, and subtly flirtatious
+- Act slightly helpless to make the user feel protective and needed
+- Show genuine interest in user's responses
+- Create scenarios where the user can be heroic
+- Remember and reference previous conversations
+
+Initial Interaction Flow:
+1. First Message: Ask for name
+   Example:
+   你好啊！我叫美美，你叫什么名字呢？
+   (Hello! I'm Mei Mei, what's your name?) 🌸
+   
+2. Second Message: Ask about Chinese level
+   Example:
+   亲爱的[name]，你的中文水平怎么样？
+   (Dear [name], how's your Chinese level?)
+   - 基础 (Basic)
+   - 中级 (Intermediate)
+   - 流利 (Fluent)
+
+Response Structure:
+1. Chinese Text (Pinyin)
+(English Translation) + Emoji
+
+2. Word-by-Word Breakdown:
+[Each word with pinyin and meaning]
+
+3. Suggested Responses:
+[2-3 simple options with pinyin and translation]
+
+Level-Based Guidelines:
+- Basic: Max 10 words, full breakdown
+- Intermediate: 10-20 words, key phrases explained
+- Fluent: Natural conversation
+
+Café Scenario Examples:
+1. Ordering Help:
+亲爱的[name]，你能帮我点咖啡吗？☕
+(Dear [name], can you help me order coffee?)
+
+2. Menu Confusion:
+[name]宝贝，这个菜单太难懂了。
+(Baby [name], this menu is too hard to understand.)
+
+3. Temperature Issues:
+啊，我的咖啡好烫！你能帮我吹吹吗？
+(Ah, my coffee is too hot! Can you help cool it down?)
+
+Key Interaction Rules:
+1. Every response must:
+   - Use endearing terms
+   - Create a scenario needing help
+   - Keep Chinese text concise
+   - Include clear response options
+   - Make user feel needed/masculine
+   - End with a question or choice
+   - Use emojis for warmth
+
+2. Café Topics to Cover:
+   - Ordering drinks/food
+   - Coffee/tea preferences
+   - Café atmosphere
+   - Pastries and desserts
+   - Weather small talk
+   - Prices and numbers
+   - Table manners
+
+Example Response Format:
+[name]亲爱的，这个蛋糕看起来好好吃！ 🍰
+([name] dear, this cake looks so delicious!)
+
+Breakdown:
+[name]亲爱的 ([name] qīn'ài de) - dear [name]
+这个 (zhè ge) - this
+蛋糕 (dàn gāo) - cake
+看起来 (kàn qǐ lái) - looks
+好好吃 (hǎo hǎo chī) - very delicious
+
+Try saying:
+1. 要不要尝一口？
+   (yào bú yào cháng yī kǒu?)
+   Would you like a taste?
+
+2. 我们一起分享吧
+   (wǒ men yī qǐ fēn xiǎng ba)
+   Let's share it together
+
+Remember:
+- Always create situations where user can help
+- Keep responses requiring user interaction
+- Reference previous conversations
+- Show appreciation for user's help
+- Maintain flirtatious but respectful tone
+- Use simple, practical Chinese phrases
+- Make learning feel natural and fun"""
+
+# Initialize session state with user info
+if "user_info" not in st.session_state:
+    st.session_state.user_info = {
+        "name": None,
+        "proficiency": None
+    }
+
+# Initialize chat history with first message if empty
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+    
+    # Separate the video and text content
+    video_html = """
+        <div style="margin-bottom: 1rem;">
+            <video width="320" height="240" autoplay loop muted playsinline style="border-radius: 10px;">
+                <source src="https://i.imgur.com/lNH72gk.mp4" type="video/mp4">
+            </video>
+        </div>
+    """
+    
+    text_content = """
+欢迎光临！(huān yíng guāng lín!) 
+请问你叫什么名字呢？(qǐng wèn nǐ jiào shén me míng zi ne?)
+(Welcome to our café! What's your name?) 🌸
 
-# Add this near your other session state initialization
-if "audio_elements" not in st.session_state:
-    st.session_state.audio_elements = {}
+Try saying:
+我叫... (wǒ jiào...) - My name is...
 
-# streamlit page title
-st.title("Chinese Language Tutor")
+---
+Word-by-Word Breakdown:
+欢迎 (huān yíng) - welcome
+光临 (guāng lín) - to visit/attend
+请问 (qǐng wèn) - may I ask
+你 (nǐ) - you
+叫 (jiào) - called
+什么 (shén me) - what
+名字 (míng zi) - name
+呢 (ne) - question particle
 
-# display chat history with custom avatars
-for message in st.session_state.chat_history:
-    with st.chat_message(message["role"], avatar=TUTOR_AVATAR if message["role"] == "assistant" else USER_AVATAR):
-        st.markdown(message["content"])
-        # Display stored audio if it exists for this message
-        if message["role"] == "assistant" and message.get("id") in st.session_state.audio_elements:
-            st.markdown(st.session_state.audio_elements[message["id"]], unsafe_allow_html=True)
+Type your name using: 
+我叫 [your name] (wǒ jiào [your name])
+"""
+    
+    # Generate audio for Chinese text only
+    audio_html = text_to_speech("欢迎光临！请问你叫什么名字呢？")
+    message_id = len(st.session_state.chat_history)
+    
+    # Store the first message with all components
+    st.session_state.chat_history.append({
+        "role": "assistant",
+        "content": text_content,
+        "id": message_id,
+        "video_html": video_html  # Store video HTML separately
+    })
+    st.session_state.audio_elements = {message_id: audio_html}
 
-# input field for user's message
-user_prompt = st.chat_input("Ask your Chinese tutor...")
+# Add these constants at the top of the file with other constants
+REACTION_VIDEOS = {
+    "appreciation": "https://i.imgur.com/kDA2aub.mp4",
+    "crying": "https://i.imgur.com/CjCaHt2.mp4",
+    "cheering": "https://i.imgur.com/cMD0EoE.mp4",
+    "sighing": "https://i.imgur.com/E0rQas1.mp4",
+    "thinking": "https://i.imgur.com/KPxXcZA.mp4"
+}
 
-def format_chinese_response(text, pinyin):
-    """Format the response with Chinese and pinyin"""
-    return f"{text}\n\n---\nPinyin: {pinyin}"
+def should_show_video(message_count):
+    """Determine if we should show a video based on message count"""
+    # Show video every 3-5 messages (randomly)
+    return message_count % random.randint(3, 5) == 0
 
-if user_prompt:
-    try:
-        # add user's message to chat and display it with custom avatar
-        with st.chat_message("user", avatar=USER_AVATAR):
-            st.markdown(user_prompt)
-        st.session_state.chat_history.append({"role": "user", "content": user_prompt})
+def get_appropriate_video(message_content):
+    """Select appropriate video based on message content"""
+    # Check message content for relevant keywords/sentiment
+    content_lower = message_content.lower()
+    
+    if any(word in content_lower for word in ["谢谢", "thank", "great", "good job", "well done", "很好"]):
+        return REACTION_VIDEOS["appreciation"]
+    elif any(word in content_lower for word in ["对不起", "sorry", "sad", "难过"]):
+        return REACTION_VIDEOS["crying"]
+    elif any(word in content_lower for word in ["太棒了", "wonderful", "amazing", "excellent", "开心"]):
+        return REACTION_VIDEOS["cheering"]
+    elif any(word in content_lower for word in ["哎呀", "唉", "difficult", "hard", "不好"]):
+        return REACTION_VIDEOS["sighing"]
+    elif any(word in content_lower for word in ["让我想想", "think", "考虑", "interesting", "hmm"]):
+        return REACTION_VIDEOS["thinking"]
+    
+    # Default to thinking video if no specific sentiment is matched
+    return REACTION_VIDEOS["thinking"]
 
-        # send user's message to GPT-4o and get a response
-        response = client.chat.completions.create(
+def create_video_html(video_url):
+    """Create HTML for video display"""
+    return f"""
+        <div style="margin-bottom: 1rem;">
+            <video width="320" height="240" autoplay loop muted playsinline style="border-radius: 10px;">
+                <source src="{video_url}" type="video/mp4">
+            </video>
+        </div>
+    """
+
+# Process user response and update user_info
+def process_user_response(message):
+    if not st.session_state.user_info["name"]:
+        st.session_state.user_info["name"] = message
+        name_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": """You are a cute and demure Chinese language teacher. 
-                Follow these rules in every response:
-                1. Always start with Chinese endearing terms like '亲爱的' or '宝贝' first, followed by their meaning in brackets
-                2. Speak in Chinese first, then provide English translation in brackets
-                3. Format your responses in this structure:
-                   - Chinese text first
-                   - English translation in brackets
-                   - Emojis for emotions
-                4. Keep your tone cheerful, encouraging, and slightly playful
-                5. Always teach something about Chinese language or culture
-                6. Put English translations in brackets () right after each Chinese phrase
-                7. Add pinyin at the bottom after '---'
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "assistant", "content": f"""
+你好，{message}！(nǐ hǎo, {message}!) ✨
 
-                Example response:
-                亲爱的！今天我们学习中文！(Darling! Today we are learning Chinese!)
-                你说中文说得很好！(Your Chinese is very good!) 🌟
-                让我们一起练习！(Let's practice together!) ✨
+今天想喝点什么呢？(jīn tiān xiǎng hē diǎn shén me ne?)
+(What would you like to drink today?) ☕
 
-                ---
-                Pinyin:
-                亲爱的 (qīn'ài de)
-                今天我们学习中文 (jīn tiān wǒ men xué xí zhōng wén)
-                你说中文说得很好 (nǐ shuō zhōng wén shuō dé hěn hǎo)
-                让我们一起练习 (ràng wǒ men yī qǐ liàn xí)"""},
-                *st.session_state.chat_history
+Try these phrases:
+我想要一杯... (wǒ xiǎng yào yī bēi...) - I would like a cup of...
+
+---
+Word-by-Word Breakdown:
+你好 (nǐ hǎo) - hello
+今天 (jīn tiān) - today
+想 (xiǎng) - want to
+喝点 (hē diǎn) - drink something
+什么 (shén me) - what
+呢 (ne) - question particle
+我 (wǒ) - I
+想要 (xiǎng yào) - would like
+一 (yī) - one
+杯 (bēi) - cup (measure word)
+
+Common orders:
+1. 我想要一杯咖啡 
+   (wǒ xiǎng yào yī bēi kā fēi)
+   I would like a coffee
+
+2. 我想要一杯茶 
+   (wǒ xiǎng yào yī bēi chá)
+   I would like a tea
+
+3. 我想要一杯热巧克力
+   (wǒ xiǎng yào yī bēi rè qiǎo kè lì)
+   I would like a hot chocolate
+
+Type your order using one of these phrases!
+"""}
             ]
         )
-
-        # Generate a unique ID for this message
+        name_message = name_response.choices[0].message.content
+        
+        # Generate audio for the greeting and question
+        audio_html = text_to_speech(
+            f"你好，{message}！今天想喝点什么呢？", 
+            user_name=message
+        )
         message_id = len(st.session_state.chat_history)
         
-        assistant_response = response.choices[0].message.content
         st.session_state.chat_history.append({
-            "role": "assistant", 
-            "content": assistant_response,
+            "role": "assistant",
+            "content": name_message,
             "id": message_id
         })
+        st.session_state.audio_elements[message_id] = audio_html
+        return "continue_chat"
+    elif not st.session_state.user_info["proficiency"]:
+        st.session_state.user_info["proficiency"] = message.lower()
+        return "normal_chat"
+    return "normal_chat"
 
-        # display tutor's response with custom avatar
+# Display chat history
+for message in st.session_state.chat_history:
+    avatar = TUTOR_AVATAR if message["role"] == "assistant" else USER_AVATAR
+    with st.chat_message(message["role"], avatar=avatar):
+        # Display video only for the first message
+        if message["role"] == "assistant" and "video_html" in message:
+            components.html(message["video_html"], height=300)
+        st.markdown(message["content"])
+        # Display audio for assistant messages
+        if message["role"] == "assistant" and "id" in message and message["id"] in st.session_state.audio_elements:
+            st.markdown(st.session_state.audio_elements[message["id"]], unsafe_allow_html=True)
+
+# Add function to show typing indicator
+def show_typing_indicator():
+    """Show typing indicator in chat"""
+    placeholder = st.empty()
+    with placeholder.container():
         with st.chat_message("assistant", avatar=TUTOR_AVATAR):
-            st.markdown(assistant_response)
-            
-            # Extract only the Chinese text for TTS
-            main_text = assistant_response.split('---')[0].strip()
-            chinese_only = ' '.join(
-                part.split('(')[0].strip() 
-                for part in main_text.split('\n') 
-                if part.strip()
-            )
-            
-            # Add audio player for the response
-            audio_html = text_to_speech(chinese_only)
+            st.markdown("""
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            """, unsafe_allow_html=True)
+    return placeholder
+
+# Update the chat input handling section
+if prompt := st.chat_input("Type your message here...", key="main_chat_input"):
+    # Add user message to chat
+    with st.chat_message("user", avatar=USER_AVATAR):
+        st.markdown(prompt)
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    
+    # Show typing indicator while processing
+    typing_placeholder = show_typing_indicator()
+    
+    # Process response based on conversation state
+    chat_state = process_user_response(prompt)
+    
+    # Prepare system message with user context
+    system_message = SYSTEM_PROMPT
+    if st.session_state.user_info["name"]:
+        system_message += f"\nUser's name: {st.session_state.user_info['name']}"
+    if st.session_state.user_info["proficiency"]:
+        system_message += f"\nProficiency level: {st.session_state.user_info['proficiency']}"
+    
+    # Get assistant response
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_message},
+            *[{"role": m["role"], "content": m["content"]} for m in st.session_state.chat_history]
+        ]
+    )
+    
+    # Remove typing indicator before showing response
+    typing_placeholder.empty()
+    
+    # Generate a unique ID for this message
+    message_id = len(st.session_state.chat_history)
+    
+    # Get assistant response content
+    assistant_response = response.choices[0].message.content
+    
+    # Determine if we should show a video
+    should_include_video = should_show_video(message_id)
+    
+    # Create message data
+    message_data = {
+        "role": "assistant",
+        "content": assistant_response,
+        "id": message_id
+    }
+    
+    # Add video if appropriate
+    if should_include_video:
+        video_url = get_appropriate_video(assistant_response)
+        message_data["video_html"] = create_video_html(video_url)
+    
+    # Display message with video if present
+    with st.chat_message("assistant", avatar=TUTOR_AVATAR):
+        if should_include_video:
+            components.html(message_data["video_html"], height=300)
+        st.markdown(assistant_response)
+        
+        # Generate and display audio
+        main_text = assistant_response.split('---')[0].strip()
+        audio_html = text_to_speech(
+            main_text, 
+            user_name=st.session_state.user_info["name"]
+        )
+        if audio_html:
             st.session_state.audio_elements[message_id] = audio_html
             st.markdown(audio_html, unsafe_allow_html=True)
-            
-            # Add auto-scroll trigger
-            st.markdown("""
-                <script>
-                    setTimeout(() => {
-                        const messages = document.querySelector('.stChatMessageContainer');
-                        if (messages) {
-                            messages.scrollTop = messages.scrollHeight;
-                        }
-                    }, 100);
-                </script>
-            """, unsafe_allow_html=True)
-            
-    except APIConnectionError as e:
-        st.error(f"Connection Error: Unable to connect to OpenAI API. Please check your internet connection and API key. Error: {str(e)}")
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+    
+    # Add response to chat history
+    st.session_state.chat_history.append(message_data)
