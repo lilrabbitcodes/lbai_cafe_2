@@ -298,14 +298,7 @@ Suggested Responses:
    (nǐ xǐ huān shén me kǒu wèi de kā fēi?)
    What flavor of coffee do you like?
 
-Remember:
-- Always create situations where user can help
-- Keep responses requiring user interaction
-- Reference previous conversations
-- Show appreciation for user's help
-- Maintain flirtatious but respectful tone
-- Use simple, practical Chinese phrases
-- Make learning feel natural and fun"""
+Try practicing these responses to improve your Chinese! Each response includes pinyin and translation to help you learn. 💪"""
 
 # Initialize session state with user info
 if "user_info" not in st.session_state:
@@ -515,8 +508,16 @@ def format_message_content(content):
             # This is a breakdown line, add proper spacing
             formatted_lines.append(line)
         elif line.startswith('Suggested Responses:'):
-            # Add extra newline before suggested responses
-            formatted_lines.extend(['', line])
+            # Add extra newline and formatting for suggested responses
+            formatted_lines.extend([
+                '',
+                '---',
+                '👉 Try one of these responses:',
+                ''
+            ])
+        elif line.strip().startswith(('1.', '2.', '3.')):
+            # Format numbered responses with emojis and better spacing
+            formatted_lines.extend(['', f'🗣 {line}'])
         else:
             formatted_lines.append(line)
     
