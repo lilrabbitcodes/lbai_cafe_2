@@ -35,17 +35,19 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
+        # Get only the first part of the message (before any breakdown or suggestions)
+        main_text = text.split('\n\n')[0] if '\n\n' in text else text
+        
         # Clean up the text and keep only Chinese characters and user's name
         cleaned_text = ""
-        in_parentheses = False
         
         # Replace {name} placeholder with actual user name if present
         if user_name:
-            text = text.replace("{name}", user_name)
+            main_text = main_text.replace("{name}", user_name)
         
-        for line in text.split('\n'):
-            # Skip sections that are explanations or translations
-            if any(skip in line.lower() for skip in ["breakdown:", "option", "---", "try", "type"]):
+        for line in main_text.split('\n'):
+            # Skip lines that are translations (in parentheses)
+            if line.strip().startswith('('):
                 continue
                 
             # Process each word in the line
@@ -89,7 +91,7 @@ def text_to_speech(text, user_name=None):
         
         # Create HTML audio element with subtle styling
         audio_html = f"""
-            <div style="margin: 8px 0;">
+            <div style="margin: 0;">
                 <audio controls style="height: 30px; width: 180px;">
                     <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
                 </audio>
@@ -571,3 +573,21 @@ if prompt := st.chat_input("Type your message here...", key="main_chat_input"):
     
     # Add response to chat history
     st.session_state.chat_history.append(message_data)
+
+# Add this JavaScript to automatically scroll to the latest message
+st.markdown("""
+<script>
+function scrollToBottom() {
+    const messages = document.querySelector('.stChatMessageContainer');
+    if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
+// Call scrollToBottom when new content is added
+const observer = new MutationObserver(scrollToBottom);
+observer.observe(
+    document.querySelector('.stChatMessageContainer'),
+    { childList: true, subtree: true }
+);
+</script>
+""", unsafe_allow_html=True)
