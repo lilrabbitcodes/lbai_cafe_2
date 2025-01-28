@@ -35,13 +35,14 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get all Chinese lines before their translations
+        # Get only the main content before Word-by-Word Breakdown
+        main_content = text.split('Word-by-Word Breakdown:')[0] if 'Word-by-Word Breakdown:' in text else text
         cleaned_text = ""
-        lines = text.split('\n')
+        lines = main_content.split('\n')
         
         for line in lines:
             # Skip if line is empty or starts with common non-Chinese sections
-            if not line.strip() or any(line.startswith(x) for x in ['Word-by-Word', 'Suggested', 'Try', '---', '🎯']):
+            if not line.strip() or any(line.startswith(x) for x in ['Repeat after me:', 'Try', '---', '🎯']):
                 continue
             
             # Get the Chinese part before the translation
