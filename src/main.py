@@ -35,29 +35,38 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get only the first Chinese sentence (before any English or newlines)
-        first_line = text.split('\n')[0]
-        main_text = first_line.split('(')[0] if '(' in first_line else first_line
-        
-        # Clean up the text and keep only Chinese characters and user's name
+        # Get all Chinese lines before their translations
         cleaned_text = ""
+        lines = text.split('\n')
         
-        # Replace {name} placeholder with actual user name if present
-        if user_name:
-            main_text = main_text.replace("[name]", user_name)
-        
-        # Process the main text
-        words = main_text.split()
-        for word in words:
-            # Keep the word if it's the user's name
-            if user_name and user_name.lower() in word.lower():
-                cleaned_text += user_name + " "
-            # Keep the word if it contains Chinese characters or specific punctuation
-            elif any('\u4e00' <= c <= '\u9fff' for c in word) or any(c in '，。！？' for c in word):
-                cleaned_text += word + " "
-            # Keep emojis if present
-            elif any(c for c in word if c in '☕🌸💕💖'):
-                cleaned_text += word + " "
+        for line in lines:
+            # Skip if line is empty or starts with common non-Chinese sections
+            if not line.strip() or any(line.startswith(x) for x in ['Word-by-Word', 'Suggested', 'Try', '---', '🎯']):
+                continue
+            
+            # Get the Chinese part before the translation
+            chinese_part = line.split('(')[0] if '(' in line else line
+            
+            # Replace [name] with actual name if present
+            if user_name:
+                chinese_part = chinese_part.replace("[name]", user_name)
+            
+            # Process each word in the line
+            words = chinese_part.split()
+            line_text = ""
+            for word in words:
+                # Keep the word if it's the user's name
+                if user_name and user_name.lower() in word.lower():
+                    line_text += user_name + " "
+                # Keep the word if it contains Chinese characters or specific punctuation
+                elif any('\u4e00' <= c <= '\u9fff' for c in word) or any(c in '，。！？' for c in word):
+                    line_text += word + " "
+                # Keep emojis if present
+                elif any(c for c in word if c in '☕🌸💕💖🌟'):
+                    line_text += word + " "
+            
+            if line_text.strip():
+                cleaned_text += line_text.strip() + "。"  # Add period between sentences
         
         # Skip if no Chinese text to process
         if not cleaned_text.strip():
@@ -303,7 +312,7 @@ Try practicing these responses to improve your Chinese! Each response includes p
 Response Format for User's Chinese Messages:
 1. First acknowledge their Chinese with a "Repeat after me" section
 2. Then give ONE short response (max 10 words)
-3. Follow with word breakdown and suggested responses
+3. Follow with word breakdown and suggested responses that are ALWAYS relevant to your response
 
 Example when user says: 我喜欢热咖啡，你呢？
 
@@ -326,15 +335,47 @@ Word-by-Word Breakdown:
 咖啡 (kā fēi) - coffee
 
 Suggested Responses:
-1. 要不要一起喝杯热咖啡？
-   (yào bú yào yī qǐ hē bēi rè kā fēi?)
-   Shall we have a hot coffee together?
+1. 那我们一起喝吧！
+   (nà wǒ men yī qǐ hē ba!)
+   Then let's drink together!
 
-2. 你喜欢加糖和奶吗？
-   (nǐ xǐ huān jiā táng hé nǎi ma?)
-   Do you like to add sugar and milk?
+2. 你要加糖吗？
+   (nǐ yào jiā táng ma?)
+   Would you like to add sugar?
 
-Try practicing these responses to improve your Chinese! 💪"""
+Example when user says: 我要加糖
+
+Your response should be:
+🎯 Repeat after me:
+我要加糖
+(wǒ yào jiā táng)
+(I want to add sugar)
+
+好的，我也喜欢甜的！🍯
+(Okay, I like sweet too!)
+
+Word-by-Word Breakdown:
+好的 (hǎo de) - okay
+我 (wǒ) - I
+也 (yě) - also
+喜欢 (xǐ huān) - like
+甜的 (tián de) - sweet
+
+Suggested Responses:
+1. 要加多少糖？
+   (yào jiā duō shao táng?)
+   How much sugar do you want to add?
+
+2. 要不要也加点奶？
+   (yào bú yào yě jiā diǎn nǎi?)
+   Would you like to add some milk too?
+
+Remember:
+- Keep responses short and sweet
+- Make sure suggested responses directly relate to your last response
+- Always provide 2-3 natural follow-up responses
+- Keep the conversation flowing naturally
+- Make learning feel fun and interactive"""
 
 # Initialize session state with user info
 if "user_info" not in st.session_state:
