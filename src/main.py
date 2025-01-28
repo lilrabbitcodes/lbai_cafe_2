@@ -298,7 +298,43 @@ Suggested Responses:
    (nǐ xǐ huān shén me kǒu wèi de kā fēi?)
    What flavor of coffee do you like?
 
-Try practicing these responses to improve your Chinese! Each response includes pinyin and translation to help you learn. 💪"""
+Try practicing these responses to improve your Chinese! Each response includes pinyin and translation to help you learn. 💪
+
+Response Format for User's Chinese Messages:
+1. First acknowledge their Chinese with a "Repeat after me" section
+2. Then give ONE short response (max 10 words)
+3. Follow with word breakdown and suggested responses
+
+Example when user says: 我喜欢热咖啡，你呢？
+
+Your response should be:
+🎯 Repeat after me:
+我喜欢热咖啡，你呢？
+(wǒ xǐ huān rè kā fēi, nǐ ne?)
+(I like hot coffee, how about you?)
+
+哇，和我一样喜欢热咖啡！☕
+(Wow, you like hot coffee just like me!)
+
+Word-by-Word Breakdown:
+哇 (wā) - wow
+和 (hé) - and
+我 (wǒ) - I/me
+一样 (yī yàng) - same
+喜欢 (xǐ huān) - like
+热 (rè) - hot
+咖啡 (kā fēi) - coffee
+
+Suggested Responses:
+1. 要不要一起喝杯热咖啡？
+   (yào bú yào yī qǐ hē bēi rè kā fēi?)
+   Shall we have a hot coffee together?
+
+2. 你喜欢加糖和奶吗？
+   (nǐ xǐ huān jiā táng hé nǎi ma?)
+   Do you like to add sugar and milk?
+
+Try practicing these responses to improve your Chinese! 💪"""
 
 # Initialize session state with user info
 if "user_info" not in st.session_state:
@@ -501,7 +537,14 @@ def format_message_content(content):
     formatted_lines = []
     
     for line in lines:
-        if line.startswith('Word-by-Word Breakdown:'):
+        if line.startswith('🎯 Repeat after me:'):
+            # Add extra formatting for repeat section
+            formatted_lines.extend([
+                '',
+                '🎯 Repeat after me:',
+                '-------------------'
+            ])
+        elif line.startswith('Word-by-Word Breakdown:'):
             # Add extra newline before breakdown section
             formatted_lines.extend(['', line, ''])
         elif ' - ' in line and '(' in line and ')' in line:
