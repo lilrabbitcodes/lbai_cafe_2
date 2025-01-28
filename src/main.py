@@ -35,15 +35,16 @@ except Exception as e:
 def text_to_speech(text, user_name=None):
     """Convert text to speech using OpenAI's TTS - Chinese only"""
     try:
-        # Get only the first line of Chinese text (before the English translation)
-        main_text = text.split('(')[0] if '(' in text else text.split('\n')[0]
+        # Get only the first Chinese sentence (before any English or newlines)
+        first_line = text.split('\n')[0]
+        main_text = first_line.split('(')[0] if '(' in first_line else first_line
         
         # Clean up the text and keep only Chinese characters and user's name
         cleaned_text = ""
         
         # Replace {name} placeholder with actual user name if present
         if user_name:
-            main_text = main_text.replace("{name}", user_name)
+            main_text = main_text.replace("[name]", user_name)
         
         # Process the main text
         words = main_text.split()
@@ -51,12 +52,9 @@ def text_to_speech(text, user_name=None):
             # Keep the word if it's the user's name
             if user_name and user_name.lower() in word.lower():
                 cleaned_text += user_name + " "
-            # Keep the word if it contains Chinese characters
-            elif any('\u4e00' <= c <= '\u9fff' for c in word):
-                # Remove any non-Chinese characters (except punctuation)
-                chinese_only = ''.join(c for c in word if '\u4e00' <= c <= '\u9fff' or c in '，。！？')
-                if chinese_only:
-                    cleaned_text += chinese_only + " "
+            # Keep the word if it contains Chinese characters or specific punctuation
+            elif any('\u4e00' <= c <= '\u9fff' for c in word) or any(c in '，。！？' for c in word):
+                cleaned_text += word + " "
             # Keep emojis if present
             elif any(c for c in word if c in '☕🌸💕💖'):
                 cleaned_text += word + " "
@@ -560,12 +558,14 @@ if prompt := st.chat_input("Type your message here...", key="main_chat_input"):
     with st.chat_message("assistant", avatar=TUTOR_AVATAR):
         if should_include_video:
             components.html(message_data["video_html"], height=300)
-        st.markdown(assistant_response)
         
-        # Generate and display audio
-        main_text = assistant_response.split('---')[0].strip()
+        # Format the content before displaying
+        formatted_content = format_message_content(assistant_response)
+        st.markdown(formatted_content)
+        
+        # Generate and display audio for the first Chinese sentence only
         audio_html = text_to_speech(
-            main_text, 
+            assistant_response, 
             user_name=st.session_state.user_info["name"]
         )
         if audio_html:
@@ -592,3 +592,24 @@ observer.observe(
 );
 </script>
 """, unsafe_allow_html=True)
+
+# Update the chat display section
+def format_message_content(content):
+    """Format the message content with proper spacing"""
+    lines = content.split('\n')
+    formatted_lines = []
+    
+    for line in lines:
+        if line.startswith('Word-by-Word Breakdown:'):
+            # Add extra newline before breakdown section
+            formatted_lines.extend(['', line, ''])
+        elif ' - ' in line and '(' in line and ')' in line:
+            # This is a breakdown line, add proper spacing
+            formatted_lines.append(line)
+        elif line.startswith('Suggested Responses:'):
+            # Add extra newline before suggested responses
+            formatted_lines.extend(['', line])
+        else:
+            formatted_lines.append(line)
+    
+    return '\n'.join(formatted_lines)
